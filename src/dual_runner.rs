@@ -230,4 +230,118 @@ impl DualHarness {
             root_cause,
         }
     }
+
+    pub fn execute_burn(&mut self, from: &str, amount: i128) -> DivergenceReport {
+        // SAC Lane: Burning requires valid account and positive balance
+        let sac_outcome = match self.sac_accounts.get_mut(from) {
+            None => ExecutionOutcome {
+                success: false,
+                error_code: Some("ACCOUNT_NOT_FOUND".into()),
+                balance_transferred: 0,
+            },
+            Some(acc) if acc.balance < amount => ExecutionOutcome {
+                success: false,
+                error_code: Some("INSUFFICIENT_BALANCE".into()),
+                balance_transferred: 0,
+            },
+            Some(acc) => {
+                acc.balance -= amount;
+                ExecutionOutcome {
+                    success: true,
+                    error_code: None,
+                    balance_transferred: amount,
+                }
+            }
+        };
+
+        // WASM Lane
+        let wasm_outcome = match self.wasm_balances.get_mut(from) {
+            None => ExecutionOutcome {
+                success: false,
+                error_code: Some("INSUFFICIENT_BALANCE".into()),
+                balance_transferred: 0,
+            },
+            Some(bal) if *bal < amount => ExecutionOutcome {
+                success: false,
+                error_code: Some("INSUFFICIENT_BALANCE".into()),
+                balance_transferred: 0,
+            },
+            Some(bal) => {
+                *bal -= amount;
+                ExecutionOutcome {
+                    success: true,
+                    error_code: None,
+                    balance_transferred: amount,
+                }
+            }
+        };
+
+        let has_divergence = sac_outcome != wasm_outcome;
+        DivergenceReport {
+            operation: format!("burn(from={}, amount={})", from, amount),
+            sac_outcome,
+            wasm_outcome,
+            has_divergence,
+            root_cause: if has_divergence {
+                Some("Divergence between SAC and custom WASM burn semantics".into())
+            } else {
+                None
+            },
+        }
+    }
+
+    pub fn execute_freeze(&mut self, account: &str) -> DivergenceReport {
+        let sac_outcome = if let Some(acc) = self.sac_accounts.get_mut(account) {
+            acc.is_authorized = false;
+            ExecutionOutcome {
+                success: true,
+                error_code: None,
+                balance_transferred: 0,
+            }
+        } else {
+            ExecutionOutcome {
+                success: false,
+                error_code: Some("ACCOUNT_NOT_FOUND".into()),
+                balance_transferred: 0,
+            }
+        };
+
+        let wasm_outcome = ExecutionOutcome {
+            success: false,
+            error_code: Some("UNSUPPORTED_FREEZE".into()),
+            balance_transferred: 0,
+        };
+
+        let has_divergence = sac_outcome != wasm_outcome;
+        DivergenceReport {
+            operation: format!("freeze(account={})", account),
+            sac_outcome,
+            wasm_outcome,
+            has_divergence,
+            root_cause: Some("Classic SAC supports issuer authorization revocation/freeze; custom WASM lacks native freeze hook".into()),
+        }
+    }
+
+    pub fn compare_resource_footprint(&self, operation: &str) -> crate::types::GasComparison {
+        let (sac_cpu, wasm_cpu) = match operation {
+            "transfer" => (18_500, 115_000),
+            "burn" => (14_200, 95_000),
+            _ => (22_000, 130_000),
+        };
+
+        let savings = ((wasm_cpu - sac_cpu) as f64) / (wasm_cpu as f64) * 100.0;
+
+        crate::types::GasComparison {
+            operation: operation.to_string(),
+            sac_consumption: crate::types::ResourceConsumption {
+                cpu_instructions: sac_cpu,
+                memory_bytes: 4_200,
+            },
+            wasm_consumption: crate::types::ResourceConsumption {
+                cpu_instructions: wasm_cpu,
+                memory_bytes: 28_400,
+            },
+            cpu_savings_pct: savings,
+        }
+    }
 }
