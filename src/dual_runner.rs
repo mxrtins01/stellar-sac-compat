@@ -290,6 +290,8 @@ impl DualHarness {
         }
     }
 
+    /// Freezes a classic Stellar trustline by revoking authorization.
+    /// Custom WASM contracts do not expose issuer freeze hooks.
     pub fn execute_freeze(&mut self, account: &str) -> DivergenceReport {
         let sac_outcome = if let Some(acc) = self.sac_accounts.get_mut(account) {
             acc.is_authorized = false;
