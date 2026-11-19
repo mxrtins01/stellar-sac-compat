@@ -1,5 +1,7 @@
 pub mod dual_runner;
+pub mod reporter;
 pub mod types;
 
 pub use dual_runner::{DivergenceReport, DualHarness};
-pub use types::{AccountTrustline, AssetFlavor, ExecutionOutcome, SacFlags};
+pub use reporter::MatrixReporter;
+pub use types::{AccountTrustline, AssetFlavor, ExecutionOutcome, GasComparison, ResourceConsumption, SacFlags};
