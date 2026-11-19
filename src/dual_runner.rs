@@ -110,4 +110,124 @@ impl DualHarness {
 
         ExecutionOutcome { success: true, error_code: None, balance_transferred: amount }
     }
+
+    pub fn execute_clawback(&mut self, _issuer: &str, from: &str, amount: i128) -> DivergenceReport {
+        // SAC Lane: Requires clawback_enabled flag on the asset
+        let sac_outcome = if !self.sac_flags.clawback_enabled {
+            ExecutionOutcome {
+                success: false,
+                error_code: Some("CLAWBACK_NOT_ENABLED".into()),
+                balance_transferred: 0,
+            }
+        } else {
+            let from_acc = match self.sac_accounts.get(from) {
+                Some(a) => a,
+                None => {
+                    return DivergenceReport {
+                        operation: format!("clawback(from={}, amount={})", from, amount),
+                        sac_outcome: ExecutionOutcome { success: false, error_code: Some("FROM_NOT_FOUND".into()), balance_transferred: 0 },
+                        wasm_outcome: ExecutionOutcome { success: false, error_code: Some("UNSUPPORTED_OPERATION".into()), balance_transferred: 0 },
+                        has_divergence: true,
+                        root_cause: Some("Account not found in SAC".into()),
+                    };
+                }
+            };
+
+            if from_acc.balance < amount {
+                ExecutionOutcome {
+                    success: false,
+                    error_code: Some("INSUFFICIENT_BALANCE".into()),
+                    balance_transferred: 0,
+                }
+            } else {
+                self.sac_accounts.get_mut(from).unwrap().balance -= amount;
+                ExecutionOutcome {
+                    success: true,
+                    error_code: None,
+                    balance_transferred: amount,
+                }
+            }
+        };
+
+        // WASM Lane: Standard SEP-41 custom tokens lack issuer clawback capabilities
+        let wasm_outcome = ExecutionOutcome {
+            success: false,
+            error_code: Some("UNSUPPORTED_OPERATION".into()),
+            balance_transferred: 0,
+        };
+
+        let has_divergence = sac_outcome != wasm_outcome;
+        let root_cause = if has_divergence && sac_outcome.success {
+            Some("SAC allows issuer clawback when enabled, but custom WASM token has no clawback interface".to_string())
+        } else if has_divergence && !sac_outcome.success {
+            Some(format!("SAC clawback failed ({:?}) while WASM returns unsupported", sac_outcome.error_code))
+        } else {
+            None
+        };
+
+        DivergenceReport {
+            operation: format!("clawback(from={}, amount={})", from, amount),
+            sac_outcome,
+            wasm_outcome,
+            has_divergence,
+            root_cause,
+        }
+    }
+
+    pub fn execute_mint(&mut self, _issuer: &str, to: &str, amount: i128) -> DivergenceReport {
+        // SAC Lane: Recipient must have established trustline and be authorized if auth_required
+        let sac_outcome = match self.sac_accounts.get(to) {
+            None => ExecutionOutcome {
+                success: false,
+                error_code: Some("NO_TRUSTLINE".into()),
+                balance_transferred: 0,
+            },
+            Some(to_acc) if !to_acc.has_trustline => ExecutionOutcome {
+                success: false,
+                error_code: Some("MISSING_TRUSTLINE".into()),
+                balance_transferred: 0,
+            },
+            Some(to_acc) if self.sac_flags.auth_required && !to_acc.is_authorized => {
+                ExecutionOutcome {
+                    success: false,
+                    error_code: Some("AUTH_REVOKED".into()),
+                    balance_transferred: 0,
+                }
+            }
+            Some(_) => {
+                self.sac_accounts.get_mut(to).unwrap().balance += amount;
+                ExecutionOutcome {
+                    success: true,
+                    error_code: None,
+                    balance_transferred: amount,
+                }
+            }
+        };
+
+        // WASM Lane: Can mint to any address without pre-existing trustline
+        *self.wasm_balances.entry(to.to_string()).or_insert(0) += amount;
+        let wasm_outcome = ExecutionOutcome {
+            success: true,
+            error_code: None,
+            balance_transferred: amount,
+        };
+
+        let has_divergence = sac_outcome != wasm_outcome;
+        let root_cause = if has_divergence {
+            Some(format!(
+                "SAC mint requires classic trustline/authorization, while WASM allows unrestricted minting: {:?}",
+                sac_outcome.error_code
+            ))
+        } else {
+            None
+        };
+
+        DivergenceReport {
+            operation: format!("mint(to={}, amount={})", to, amount),
+            sac_outcome,
+            wasm_outcome,
+            has_divergence,
+            root_cause,
+        }
+    }
 }
