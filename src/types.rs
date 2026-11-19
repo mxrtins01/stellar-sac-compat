@@ -27,3 +27,17 @@ pub struct ExecutionOutcome {
     pub error_code: Option<String>,
     pub balance_transferred: i128,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ResourceConsumption {
+    pub cpu_instructions: u64,
+    pub memory_bytes: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GasComparison {
+    pub operation: String,
+    pub sac_consumption: ResourceConsumption,
+    pub wasm_consumption: ResourceConsumption,
+    pub cpu_savings_pct: f64,
+}
