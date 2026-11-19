@@ -104,3 +104,26 @@ fn test_mint_trustline_and_auth_divergence() {
     assert!(report.wasm_outcome.success);
     assert_eq!(report.wasm_outcome.balance_transferred, 500);
 }
+
+#[test]
+fn test_freeze_divergence() {
+    let mut harness = DualHarness::new(SacFlags::default());
+    harness.set_balance("BAD_ACTOR", 500, true, true);
+
+    let report = harness.execute_freeze("BAD_ACTOR");
+    assert!(report.has_divergence);
+    assert!(report.sac_outcome.success);
+    assert!(!report.wasm_outcome.success);
+    assert_eq!(report.wasm_outcome.error_code.as_deref(), Some("UNSUPPORTED_FREEZE"));
+}
+
+#[test]
+fn test_matrix_reporter_markdown() {
+    use stellar_sac_compat::MatrixReporter;
+    let mut harness = DualHarness::new(SacFlags::default());
+    harness.set_balance("ALICE", 1_000, true, true);
+    let r1 = harness.execute_transfer("ALICE", "BOB", 100);
+    let md = MatrixReporter::format_markdown(&[r1]);
+    assert!(md.contains("Compatibility Matrix"));
+    assert!(md.contains("transfer(ALICE -> BOB"));
+}
