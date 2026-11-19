@@ -52,3 +52,55 @@ fn test_auth_revocation_divergence_detection() {
     assert_eq!(report.sac_outcome.error_code.as_deref(), Some("AUTH_REVOKED"));
     assert!(report.wasm_outcome.success);
 }
+
+#[test]
+fn test_clawback_divergence_when_enabled() {
+    let flags = SacFlags {
+        auth_required: false,
+        auth_revocable: false,
+        clawback_enabled: true,
+    };
+    let mut harness = DualHarness::new(flags);
+    harness.set_balance("VICTIM", 1_000, true, true);
+
+    let report = harness.execute_clawback("ISSUER", "VICTIM", 400);
+    assert!(report.has_divergence);
+    assert!(report.sac_outcome.success);
+    assert_eq!(report.sac_outcome.balance_transferred, 400);
+    assert!(!report.wasm_outcome.success);
+    assert_eq!(report.wasm_outcome.error_code.as_deref(), Some("UNSUPPORTED_OPERATION"));
+    assert!(report.root_cause.unwrap().contains("custom WASM token has no clawback"));
+}
+
+#[test]
+fn test_clawback_rejected_when_flag_disabled() {
+    let flags = SacFlags {
+        auth_required: false,
+        auth_revocable: false,
+        clawback_enabled: false,
+    };
+    let mut harness = DualHarness::new(flags);
+    harness.set_balance("USER", 500, true, true);
+
+    let report = harness.execute_clawback("ISSUER", "USER", 100);
+    assert!(!report.sac_outcome.success);
+    assert_eq!(report.sac_outcome.error_code.as_deref(), Some("CLAWBACK_NOT_ENABLED"));
+}
+
+#[test]
+fn test_mint_trustline_and_auth_divergence() {
+    let flags = SacFlags {
+        auth_required: true,
+        auth_revocable: false,
+        clawback_enabled: false,
+    };
+    let mut harness = DualHarness::new(flags);
+
+    // Recipient has no trustline setup in SAC
+    let report = harness.execute_mint("ISSUER", "NEW_USER", 500);
+    assert!(report.has_divergence);
+    assert!(!report.sac_outcome.success);
+    assert_eq!(report.sac_outcome.error_code.as_deref(), Some("NO_TRUSTLINE"));
+    assert!(report.wasm_outcome.success);
+    assert_eq!(report.wasm_outcome.balance_transferred, 500);
+}
