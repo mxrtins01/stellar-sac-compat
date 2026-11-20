@@ -127,3 +127,24 @@ fn test_matrix_reporter_markdown() {
     assert!(md.contains("Compatibility Matrix"));
     assert!(md.contains("transfer(ALICE -> BOB"));
 }
+
+#[test]
+fn test_allowance_expiration_divergence() {
+    use stellar_sac_compat::DivergenceSeverity;
+
+    let flags = SacFlags {
+        clawback_enabled: false,
+        auth_required: false,
+        auth_revocable: false,
+    };
+    let mut harness = DualHarness::new(flags);
+    harness.set_balance("ALICE", 1_000, true, true);
+    harness.set_balance("BOB", 0, true, true);
+
+    let report = harness.execute_allowance_transfer("BOB", "ALICE", 200, 1000, 1500);
+    assert!(report.has_divergence);
+    assert!(!report.sac_outcome.success);
+    assert_eq!(report.sac_outcome.error_code, Some("ALLOWANCE_EXPIRED".into()));
+    assert!(report.wasm_outcome.success);
+    assert_eq!(report.severity(), DivergenceSeverity::Critical);
+}
