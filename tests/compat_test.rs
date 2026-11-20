@@ -190,3 +190,13 @@ fn test_matrix_csv_format() {
     assert!(csv.contains("\"transfer\",PASS,FAIL,true,\"Balance divergence\""));
 }
 
+#[test]
+fn test_divergence_severity_display() {
+    use stellar_sac_compat::types::DivergenceSeverity;
+
+    assert_eq!(DivergenceSeverity::Info.to_string(), "INFO");
+    assert_eq!(DivergenceSeverity::Warning.to_string(), "WARNING");
+    assert_eq!(DivergenceSeverity::Critical.to_string(), "CRITICAL");
+}
+
+
