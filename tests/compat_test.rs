@@ -162,3 +162,31 @@ fn test_event_topic_comparison_helper() {
     let div_cmp = EventComparison::new("transfer", sac_topics, custom_wasm_topics);
     assert!(!div_cmp.matches);
 }
+
+#[test]
+fn test_matrix_csv_format() {
+    use stellar_sac_compat::reporter::MatrixReporter;
+    use stellar_sac_compat::dual_runner::DivergenceReport;
+    use stellar_sac_compat::types::ExecutionOutcome;
+
+    let report = DivergenceReport {
+        operation: "transfer".into(),
+        sac_outcome: ExecutionOutcome {
+            success: true,
+            error_code: None,
+            balance_transferred: 100,
+        },
+        wasm_outcome: ExecutionOutcome {
+            success: false,
+            error_code: Some("insufficient_balance".into()),
+            balance_transferred: 0,
+        },
+        has_divergence: true,
+        root_cause: Some("Balance divergence".into()),
+    };
+
+    let csv = MatrixReporter::format_csv(&[report]);
+    assert!(csv.starts_with("operation,sac_status,wasm_status,has_divergence,root_cause\n"));
+    assert!(csv.contains("\"transfer\",PASS,FAIL,true,\"Balance divergence\""));
+}
+
