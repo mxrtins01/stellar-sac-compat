@@ -50,6 +50,23 @@ pub struct EventComparison {
     pub matches: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DivergenceSeverity {
+    Info,
+    Warning,
+    Critical,
+}
+
+impl std::fmt::Display for DivergenceSeverity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Info => write!(f, "INFO"),
+            Self::Warning => write!(f, "WARNING"),
+            Self::Critical => write!(f, "CRITICAL"),
+        }
+    }
+}
+
 impl EventComparison {
     pub fn new(operation: impl Into<String>, sac_topics: Vec<String>, wasm_topics: Vec<String>) -> Self {
         let matches = sac_topics == wasm_topics;

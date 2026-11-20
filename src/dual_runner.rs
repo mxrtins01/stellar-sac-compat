@@ -11,6 +11,18 @@ pub struct DivergenceReport {
     pub root_cause: Option<String>,
 }
 
+impl DivergenceReport {
+    pub fn severity(&self) -> crate::types::DivergenceSeverity {
+        if !self.has_divergence {
+            crate::types::DivergenceSeverity::Info
+        } else if self.sac_outcome.success != self.wasm_outcome.success {
+            crate::types::DivergenceSeverity::Critical
+        } else {
+            crate::types::DivergenceSeverity::Warning
+        }
+    }
+}
+
 pub struct DualHarness {
     pub sac_flags: SacFlags,
     pub sac_accounts: HashMap<String, AccountTrustline>,
