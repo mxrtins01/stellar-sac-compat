@@ -41,3 +41,23 @@ pub struct GasComparison {
     pub wasm_consumption: ResourceConsumption,
     pub cpu_savings_pct: f64,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct EventComparison {
+    pub operation: String,
+    pub sac_topics: Vec<String>,
+    pub wasm_topics: Vec<String>,
+    pub matches: bool,
+}
+
+impl EventComparison {
+    pub fn new(operation: impl Into<String>, sac_topics: Vec<String>, wasm_topics: Vec<String>) -> Self {
+        let matches = sac_topics == wasm_topics;
+        Self {
+            operation: operation.into(),
+            sac_topics,
+            wasm_topics,
+            matches,
+        }
+    }
+}
