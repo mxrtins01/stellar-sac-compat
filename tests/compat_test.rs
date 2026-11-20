@@ -148,3 +148,17 @@ fn test_allowance_expiration_divergence() {
     assert!(report.wasm_outcome.success);
     assert_eq!(report.severity(), DivergenceSeverity::Critical);
 }
+
+#[test]
+fn test_event_topic_comparison_helper() {
+    use stellar_sac_compat::EventComparison;
+
+    let sac_topics = vec!["transfer".into(), "G_ALICE".into(), "G_BOB".into()];
+    let wasm_topics = vec!["transfer".into(), "G_ALICE".into(), "G_BOB".into()];
+    let match_cmp = EventComparison::new("transfer", sac_topics.clone(), wasm_topics);
+    assert!(match_cmp.matches);
+
+    let custom_wasm_topics = vec!["custom_transfer_event".into()];
+    let div_cmp = EventComparison::new("transfer", sac_topics, custom_wasm_topics);
+    assert!(!div_cmp.matches);
+}
