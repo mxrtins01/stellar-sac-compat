@@ -22,4 +22,18 @@ impl MatrixReporter {
 
         out
     }
+
+    pub fn format_csv(reports: &[DivergenceReport]) -> String {
+        let mut out = String::from("operation,sac_status,wasm_status,has_divergence,root_cause\n");
+        for r in reports {
+            let sac_stat = if r.sac_outcome.success { "PASS" } else { "FAIL" };
+            let wasm_stat = if r.wasm_outcome.success { "PASS" } else { "FAIL" };
+            let cause = r.root_cause.as_deref().unwrap_or("");
+            out.push_str(&format!(
+                "\"{}\",{},{},{},\"{}\"\n",
+                r.operation, sac_stat, wasm_stat, r.has_divergence, cause
+            ));
+        }
+        out
+    }
 }
