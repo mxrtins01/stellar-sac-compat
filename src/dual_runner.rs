@@ -346,4 +346,39 @@ impl DualHarness {
             cpu_savings_pct: savings,
         }
     }
+
+    pub fn execute_allowance_transfer(
+        &mut self,
+        spender: &str,
+        from: &str,
+        amount: i128,
+        expiration_ledger: u32,
+        current_ledger: u32,
+    ) -> DivergenceReport {
+        let sac_outcome = if current_ledger > expiration_ledger {
+            ExecutionOutcome {
+                success: false,
+                error_code: Some("ALLOWANCE_EXPIRED".into()),
+                balance_transferred: 0,
+            }
+        } else {
+            self.execute_sac_transfer(from, spender, amount)
+        };
+
+        let wasm_outcome = self.execute_wasm_transfer(from, spender, amount);
+        let has_divergence = sac_outcome != wasm_outcome;
+        let root_cause = if has_divergence {
+            Some("SAC enforces ledger expiration boundaries on allowances, whereas naive WASM ignored expiration".into())
+        } else {
+            None
+        };
+
+        DivergenceReport {
+            operation: format!("transfer_from(spender={}, from={}, amount={})", spender, from, amount),
+            sac_outcome,
+            wasm_outcome,
+            has_divergence,
+            root_cause,
+        }
+    }
 }
