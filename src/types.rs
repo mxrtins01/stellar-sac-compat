@@ -50,6 +50,25 @@ pub struct EventComparison {
     pub matches: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ReturnValueComparison {
+    pub operation: String,
+    pub sac_return_bytes: Vec<u8>,
+    pub wasm_return_bytes: Vec<u8>,
+    pub is_equivalent: bool,
+}
+
+impl ReturnValueComparison {
+    pub fn compare(operation: impl Into<String>, sac: &[u8], wasm: &[u8]) -> Self {
+        Self {
+            operation: operation.into(),
+            sac_return_bytes: sac.to_vec(),
+            wasm_return_bytes: wasm.to_vec(),
+            is_equivalent: sac == wasm,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DivergenceSeverity {
     Info,
