@@ -1,0 +1,16 @@
+{
+  "test_cases": [
+    {
+      "operation": "transfer_missing_trustline",
+      "sac_expected_success": false,
+      "wasm_expected_success": true,
+      "divergence_expected": true
+    },
+    {
+      "operation": "clawback_enabled",
+      "sac_expected_success": true,
+      "wasm_expected_success": true,
+      "divergence_expected": false
+    }
+  ]
+}
