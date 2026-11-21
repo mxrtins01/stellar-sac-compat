@@ -281,4 +281,37 @@ fn test_return_value_comparator() {
     assert_eq!(div_cmp.operation, "transfer");
 }
 
+#[test]
+fn test_matrix_json_format_and_cli_guide() {
+    use stellar_sac_compat::reporter::MatrixReporter;
+    use stellar_sac_compat::dual_runner::DivergenceReport;
+    use stellar_sac_compat::types::ExecutionOutcome;
+
+    let report = DivergenceReport {
+        operation: "burn".into(),
+        sac_outcome: ExecutionOutcome {
+            success: true,
+            error_code: None,
+            balance_transferred: 50,
+        },
+        wasm_outcome: ExecutionOutcome {
+            success: true,
+            error_code: None,
+            balance_transferred: 50,
+        },
+        has_divergence: false,
+        root_cause: None,
+    };
+
+    let json_str = MatrixReporter::format_json(&[report]);
+    assert!(json_str.contains("\"operation\": \"burn\""));
+    assert!(json_str.contains("\"has_divergence\": false"));
+
+    let guide_p = std::path::Path::new("docs/CLI_GUIDE.md");
+    assert!(guide_p.exists());
+    let guide_content = std::fs::read_to_string(guide_p).expect("read guide");
+    assert!(guide_content.contains("Stellar SAC vs Custom WASM Compatibility Guide"));
+    assert!(guide_content.contains("Divergence Taxonomy & Severity"));
+}
+
 
