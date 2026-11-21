@@ -107,7 +107,10 @@ fn test_mint_trustline_and_auth_divergence() {
 
 #[test]
 fn test_freeze_divergence() {
-    let mut harness = DualHarness::new(SacFlags::default());
+    let mut harness = DualHarness::new(SacFlags {
+        auth_revocable: true,
+        ..SacFlags::default()
+    });
     harness.set_balance("BAD_ACTOR", 500, true, true);
 
     let report = harness.execute_freeze("BAD_ACTOR");
@@ -115,6 +118,61 @@ fn test_freeze_divergence() {
     assert!(report.sac_outcome.success);
     assert!(!report.wasm_outcome.success);
     assert_eq!(report.wasm_outcome.error_code.as_deref(), Some("UNSUPPORTED_FREEZE"));
+}
+
+#[test]
+fn test_classic_asset_flag_permutations() {
+    for auth_required in [false, true] {
+        for auth_revocable in [false, true] {
+            for clawback_enabled in [false, true] {
+                let flags = SacFlags {
+                    auth_required,
+                    auth_revocable,
+                    clawback_enabled,
+                };
+                let mut harness = DualHarness::new(flags);
+                harness.set_balance("ALICE", 1_000, true, false);
+                harness.set_balance("BOB", 1_000, true, true);
+
+                let transfer = harness.execute_transfer("ALICE", "ALICE", 10);
+                assert_eq!(
+                    transfer.sac_outcome.success,
+                    !auth_required,
+                    "auth_required={auth_required}, auth_revocable={auth_revocable}, clawback_enabled={clawback_enabled}"
+                );
+                if auth_required {
+                    assert_eq!(transfer.sac_outcome.error_code.as_deref(), Some("AUTH_REVOKED"));
+                }
+
+                let freeze = harness.execute_freeze("BOB");
+                assert_eq!(
+                    freeze.sac_outcome.success,
+                    auth_revocable,
+                    "auth_required={auth_required}, auth_revocable={auth_revocable}, clawback_enabled={clawback_enabled}"
+                );
+                if !auth_revocable {
+                    assert_eq!(
+                        freeze.sac_outcome.error_code.as_deref(),
+                        Some("AUTHORIZATION_NOT_REVOCABLE")
+                    );
+                }
+                assert_eq!(harness.sac_accounts["BOB"].is_authorized, !auth_revocable);
+
+                let clawback = harness.execute_clawback("ISSUER", "ALICE", 10);
+                assert_eq!(
+                    clawback.sac_outcome.success,
+                    clawback_enabled,
+                    "auth_required={auth_required}, auth_revocable={auth_revocable}, clawback_enabled={clawback_enabled}"
+                );
+                if !clawback_enabled {
+                    assert_eq!(
+                        clawback.sac_outcome.error_code.as_deref(),
+                        Some("CLAWBACK_NOT_ENABLED")
+                    );
+                }
+            }
+        }
+    }
 }
 
 #[test]

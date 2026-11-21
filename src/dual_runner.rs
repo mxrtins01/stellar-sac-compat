@@ -305,7 +305,13 @@ impl DualHarness {
     /// Freezes a classic Stellar trustline by revoking authorization.
     /// Custom WASM contracts do not expose issuer freeze hooks.
     pub fn execute_freeze(&mut self, account: &str) -> DivergenceReport {
-        let sac_outcome = if let Some(acc) = self.sac_accounts.get_mut(account) {
+        let sac_outcome = if !self.sac_flags.auth_revocable {
+            ExecutionOutcome {
+                success: false,
+                error_code: Some("AUTHORIZATION_NOT_REVOCABLE".into()),
+                balance_transferred: 0,
+            }
+        } else if let Some(acc) = self.sac_accounts.get_mut(account) {
             acc.is_authorized = false;
             ExecutionOutcome {
                 success: true,
@@ -327,12 +333,17 @@ impl DualHarness {
         };
 
         let has_divergence = sac_outcome != wasm_outcome;
+        let root_cause = if !self.sac_flags.auth_revocable {
+            "Classic SAC issuer authorization revocation is disabled by the asset flags; custom WASM has no freeze hook".into()
+        } else {
+            "Classic SAC supports issuer authorization revocation/freeze; custom WASM lacks native freeze hook".into()
+        };
         DivergenceReport {
             operation: format!("freeze(account={})", account),
             sac_outcome,
             wasm_outcome,
             has_divergence,
-            root_cause: Some("Classic SAC supports issuer authorization revocation/freeze; custom WASM lacks native freeze hook".into()),
+            root_cause: Some(root_cause),
         }
     }
 
