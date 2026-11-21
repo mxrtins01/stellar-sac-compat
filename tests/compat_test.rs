@@ -269,4 +269,16 @@ fn test_mock_compat_matrix_fixture_deserialization() {
     assert_eq!(arr[0]["divergence_expected"], true);
 }
 
+#[test]
+fn test_return_value_comparator() {
+    use stellar_sac_compat::ReturnValueComparison;
+
+    let eq_cmp = ReturnValueComparison::compare("transfer", &[1, 2, 3], &[1, 2, 3]);
+    assert!(eq_cmp.is_equivalent);
+
+    let div_cmp = ReturnValueComparison::compare("transfer", &[1, 2, 3], &[1, 2, 4]);
+    assert!(!div_cmp.is_equivalent);
+    assert_eq!(div_cmp.operation, "transfer");
+}
+
 
