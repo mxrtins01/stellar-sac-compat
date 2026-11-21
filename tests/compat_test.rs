@@ -257,4 +257,16 @@ fn test_divergence_severity_display() {
     assert_eq!(DivergenceSeverity::Critical.to_string(), "CRITICAL");
 }
 
+#[test]
+fn test_mock_compat_matrix_fixture_deserialization() {
+    let p = std::path::Path::new("examples/fixtures/mock_compat_matrix.json");
+    assert!(p.exists());
+    let raw = std::fs::read_to_string(p).expect("read matrix json");
+    let json: serde_json::Value = serde_json::from_str(&raw).expect("parse json");
+    let arr = json["test_cases"].as_array().expect("test_cases array");
+    assert_eq!(arr.len(), 2);
+    assert_eq!(arr[0]["operation"], "transfer_missing_trustline");
+    assert_eq!(arr[0]["divergence_expected"], true);
+}
+
 
