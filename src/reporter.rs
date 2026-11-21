@@ -36,4 +36,8 @@ impl MatrixReporter {
         }
         out
     }
+
+    pub fn format_json(reports: &[DivergenceReport]) -> String {
+        serde_json::to_string_pretty(reports).unwrap_or_else(|_| "[]".to_string())
+    }
 }
