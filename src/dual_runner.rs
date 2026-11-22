@@ -51,6 +51,16 @@ impl DualHarness {
         self.wasm_balances.insert(account.to_string(), amount);
     }
 
+    pub fn execute_batch_transfers(
+        &mut self,
+        transfers: &[(&str, &str, i128)],
+    ) -> Vec<DivergenceReport> {
+        transfers
+            .iter()
+            .map(|(from, to, amount)| self.execute_transfer(from, to, *amount))
+            .collect()
+    }
+
     pub fn execute_transfer(&mut self, from: &str, to: &str, amount: i128) -> DivergenceReport {
         // Lane A: SAC
         let sac_outcome = self.execute_sac_transfer(from, to, amount);
