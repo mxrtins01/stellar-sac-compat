@@ -40,4 +40,21 @@ impl MatrixReporter {
     pub fn format_json(reports: &[DivergenceReport]) -> String {
         serde_json::to_string_pretty(reports).unwrap_or_else(|_| "[]".to_string())
     }
+
+    pub fn format_console_diff(reports: &[DivergenceReport]) -> String {
+        let mut out = String::new();
+        for r in reports {
+            if r.has_divergence {
+                out.push_str(&format!("\x1b[31m[DIVERGENCE] {}\x1b[0m\n", r.operation));
+                out.push_str(&format!("  SAC  success: {}\n", r.sac_outcome.success));
+                out.push_str(&format!("  WASM success: {}\n", r.wasm_outcome.success));
+                if let Some(ref cause) = r.root_cause {
+                    out.push_str(&format!("  Cause: \x1b[33m{}\x1b[0m\n", cause));
+                }
+            } else {
+                out.push_str(&format!("\x1b[32m[EQUIVALENT] {}\x1b[0m\n", r.operation));
+            }
+        }
+        out
+    }
 }
