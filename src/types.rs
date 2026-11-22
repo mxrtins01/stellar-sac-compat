@@ -69,6 +69,21 @@ impl ReturnValueComparison {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AllowanceEquivalence;
+
+impl AllowanceEquivalence {
+    pub fn verify(allowance: i128, requested: i128) -> Result<(), String> {
+        if requested < 0 {
+            return Err("Negative transfer disallowed".into());
+        }
+        if requested > allowance {
+            return Err(format!("Insufficient allowance: allowed {}, requested {}", allowance, requested));
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DivergenceSeverity {
     Info,

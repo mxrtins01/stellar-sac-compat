@@ -4,4 +4,4 @@ pub mod types;
 
 pub use dual_runner::{DivergenceReport, DualHarness};
 pub use reporter::MatrixReporter;
-pub use types::{AccountTrustline, AssetFlavor, DivergenceSeverity, EventComparison, ExecutionOutcome, GasComparison, ResourceConsumption, ReturnValueComparison, SacFlags};
+pub use types::{AccountTrustline, AllowanceEquivalence, AssetFlavor, DivergenceSeverity, EventComparison, ExecutionOutcome, GasComparison, ResourceConsumption, ReturnValueComparison, SacFlags};
