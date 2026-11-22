@@ -328,4 +328,33 @@ fn test_zero_allowance_transfer_from_equivalence() {
     assert!(AllowanceEquivalence::verify(500, 250).is_ok());
 }
 
+#[test]
+fn test_console_colorized_diff() {
+    use stellar_sac_compat::reporter::MatrixReporter;
+    use stellar_sac_compat::dual_runner::DivergenceReport;
+    use stellar_sac_compat::types::ExecutionOutcome;
+
+    let reports = vec![
+        DivergenceReport {
+            operation: "transfer".into(),
+            sac_outcome: ExecutionOutcome { success: true, error_code: None, balance_transferred: 10 },
+            wasm_outcome: ExecutionOutcome { success: true, error_code: None, balance_transferred: 10 },
+            has_divergence: false,
+            root_cause: None,
+        },
+        DivergenceReport {
+            operation: "clawback".into(),
+            sac_outcome: ExecutionOutcome { success: false, error_code: Some("unauthorized".into()), balance_transferred: 0 },
+            wasm_outcome: ExecutionOutcome { success: true, error_code: None, balance_transferred: 10 },
+            has_divergence: true,
+            root_cause: Some("Flag disabled on SAC".into()),
+        },
+    ];
+
+    let diff = MatrixReporter::format_console_diff(&reports);
+    assert!(diff.contains("\x1b[32m[EQUIVALENT] transfer\x1b[0m"));
+    assert!(diff.contains("\x1b[31m[DIVERGENCE] clawback\x1b[0m"));
+    assert!(diff.contains("Flag disabled on SAC"));
+}
+
 
