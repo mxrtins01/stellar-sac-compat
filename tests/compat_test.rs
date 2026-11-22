@@ -357,4 +357,22 @@ fn test_console_colorized_diff() {
     assert!(diff.contains("Flag disabled on SAC"));
 }
 
+#[test]
+fn test_batch_transfers_simulation() {
+    use stellar_sac_compat::{DualHarness, SacFlags};
+
+    let mut harness = DualHarness::new(SacFlags::default());
+    harness.set_balance("ALICE", 1000, true, true);
+    harness.set_balance("BOB", 0, true, true);
+
+    let batch = vec![
+        ("ALICE", "BOB", 100),
+        ("ALICE", "BOB", 200),
+    ];
+    let reports = harness.execute_batch_transfers(&batch);
+    assert_eq!(reports.len(), 2);
+    assert!(!reports[0].has_divergence);
+    assert!(!reports[1].has_divergence);
+}
+
 
