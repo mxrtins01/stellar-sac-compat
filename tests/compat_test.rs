@@ -314,4 +314,18 @@ fn test_matrix_json_format_and_cli_guide() {
     assert!(guide_content.contains("Divergence Taxonomy & Severity"));
 }
 
+#[test]
+fn test_zero_allowance_transfer_from_equivalence() {
+    use stellar_sac_compat::AllowanceEquivalence;
+
+    // Zero allowance, 0 requested -> Ok
+    assert!(AllowanceEquivalence::verify(0, 0).is_ok());
+
+    // Zero allowance, > 0 requested -> Err
+    assert!(AllowanceEquivalence::verify(0, 100).is_err());
+
+    // Sufficient allowance -> Ok
+    assert!(AllowanceEquivalence::verify(500, 250).is_ok());
+}
+
 
